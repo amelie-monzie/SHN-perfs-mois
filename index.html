@@ -31,6 +31,7 @@
 html{background:var(--rouge-nuit)}
 body{margin:0;min-height:100%;background:var(--rouge-nuit);color:var(--ivoire);font:400 16px/1.5 var(--f-texte);-webkit-font-smoothing:antialiased}
 .fond{position:fixed;inset:0;z-index:0;background:var(--rouge) url("fond.jpg") center 30%/cover no-repeat}
+@media (min-aspect-ratio:1/1){.fond{background-image:url("fond-large.jpg");background-position:center}}
 .fond::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 35%,transparent 40%,rgba(40,3,3,.55) 100%)}
 
 .page{position:relative;z-index:1;max-width:540px;margin:0 auto;padding-inline:20px;padding-block:18px 40px;min-height:100vh;min-height:100svh;display:flex;flex-direction:column;gap:28px}
@@ -325,7 +326,7 @@ section[data-ecran]{display:flex;flex-direction:column;gap:22px;animation:entre 
       <h2 class="gros">MERCI</h2>
       <div class="serif" id="merci-prenom">champion</div>
       <div class="record" id="speedrun" hidden><p class="trophee" id="speedrun-titre"></p><p class="record-txt" id="speedrun-txt"></p></div>
-      <p class="intro" id="merci-txt">C'est bien reçu, MERCI! Garde un œil sur l'Insta @SHN_INSATOULOUSE: ta perf pourrait bien y passer.</p>
+      <p class="intro" id="merci-txt">C'est bien reçu, MERCI! Garde un œil sur l'Insta @SHN_INSATOULOUSE: ta perf pourrait bien y passer :)</p>
       <p class="intro" style="margin-top:8px">Un·e pote de la section a fait un truc fou&nbsp;? Envoie-lui le lien.</p>
     </div>
     <button class="btn large" id="recommencer">Remplir pour quelqu'un d'autre</button>
@@ -347,6 +348,12 @@ const FACTEUR = "https://script.google.com/macros/s/AKfycbzt1KXAgZtW57fISzCGeZtB
 /* Mode aperçu : rien n'est envoyé. Automatique partout sauf sur github.io.
    Mets true / false pour forcer. */
 const APERCU = !/github\.io$/.test(location.hostname) && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+
+/* Message affiché si la recherche du nom prend plus de 3,5 secondes */
+const MSG_ATTENTE_RECHERCHE = "le serveur n'est pas SHN... encore quelques secondes sivouplé...";
+
+/* Message de l'écran de remerciement (tous les parcours) */
+const MERCI_TXT = "C'est bien reçu, MERCI! Garde un œil sur l'Insta @SHN_INSATOULOUSE: ta perf pourrait bien y passer :)";
 
 /* Exemple affiché dans la case du nom (page d'accueil) */
 const EXEMPLE_NOM = "Jacques Ouzi";
@@ -449,7 +456,7 @@ $("#f-nom").addEventListener("submit", async e => {
   liste.hidden = true; msg("msg-nom");
   if (norm(texte).split(" ").length < 2) return msg("msg-nom", "Écris ton prénom et ton nom, par exemple « Théo Faure ».");
   const b = $("#btn-nom"); b.disabled = true; b.textContent = "On te cherche…";
-  const patience = setTimeout(() => msg("msg-nom", "Le facteur se réveille, encore quelques secondes…"), 3500);
+  const patience = setTimeout(() => msg("msg-nom", MSG_ATTENTE_RECHERCHE), 3500);
   try {
     const t = await chercher(texte);
     if (t.length === 1) return choisir(t[0]);
@@ -463,7 +470,7 @@ $("#f-nom").addEventListener("submit", async e => {
     $("#go-inconnu").onclick = () => { $("#libre-nom").value = texte; montrer("inconnu"); };
   } catch (err) {
     msg("msg-nom", "Connexion impossible pour l'instant. Vérifie ton réseau et réessaie.");
-  } finally { clearTimeout(patience); b.disabled = false; b.textContent = "C'est parti"; }
+  } finally { clearTimeout(patience); b.disabled = false; b.textContent = "LETSSSSGOOOO"; }
 });
 
 function choisir(a) {
@@ -789,8 +796,7 @@ async function envoyer() {
     if (APERCU && d.duree) { rep = { ok: true, record: !recordApercu || d.duree < recordApercu ? { ancien: recordApercu } : null }; if (rep.record) recordApercu = d.duree; }
     fait = total; avance("C'est envoyé !");
     await pause(300);
-    $("#merci-txt").textContent = S.statut === "Perfs" ? "C'est bien reçu. Garde un œil sur l'Insta S²E : ta perf pourrait bien y passer."
-      : S.statut === "Blessé·e" ? "C'est noté. Bon courage pour la reprise, on a hâte de te revoir en compèt'." : "C'est noté. Rendez-vous le mois prochain !";
+    $("#merci-txt").textContent = MERCI_TXT;
     const h = new Date().getHours();
     if (h >= 1 && h < 5) $("#merci-txt").textContent = "Merci… mais va dormir, la récup c'est aussi de l'entraînement.";
     const sr = $("#speedrun");
