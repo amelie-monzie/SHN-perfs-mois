@@ -154,6 +154,27 @@ button:focus-visible,.ajout-photo:focus-within{outline:2px solid var(--or);outli
 .envoi{text-align:center;display:flex;flex-direction:column;gap:18px;align-items:center;padding-top:30px}
 .barre{width:100%;height:2px;background:var(--ligne);position:relative;overflow:hidden}
 .barre b{position:absolute;inset:0 auto 0 0;background:var(--or);width:0;transition:width .3s}
+.jauge{width:100%;height:28px;border:1px solid var(--ligne);border-radius:2px;position:relative;overflow:hidden;background:var(--voile)}
+.jauge b{position:absolute;inset:0 auto 0 0;width:0;background:linear-gradient(90deg,var(--or),var(--succes));transition:width .35s ease}
+.jauge b::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(-45deg,rgba(255,255,255,.18) 0 10px,transparent 10px 20px);background-size:28px 28px;animation:rayures .8s linear infinite}
+.jauge span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:400 18px/1 var(--f-titre);letter-spacing:.12em;color:var(--ivoire);text-shadow:0 1px 4px rgba(40,0,0,.75);font-variant-numeric:tabular-nums}
+@keyframes rayures{to{background-position:28px 0}}
+.points i{font-style:normal;animation:point 1.2s infinite both}
+.points i:nth-child(2){animation-delay:.2s}.points i:nth-child(3){animation-delay:.4s}
+@keyframes point{0%,20%{opacity:0}40%,100%{opacity:1}}
+.reste{font:500 11px/1.4 var(--f-label);letter-spacing:.2em;text-transform:uppercase;color:var(--ivoire-doux);margin:0}
+.envoi.fini .jauge b::after,.envoi.fini .points{display:none}
+.jeu{width:100%;display:flex;flex-direction:column;gap:10px;margin-top:10px}
+.jeu-tete{display:flex;justify-content:space-between;margin:0;font:500 11px/1 var(--f-label);letter-spacing:.22em;text-transform:uppercase;color:var(--ivoire-doux)}
+.jeu-tete span:last-child{color:var(--succes)}
+.blocs{width:100%;min-height:190px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px;border:1px solid var(--ligne);border-radius:4px;background:var(--voile);color:var(--ivoire);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;transition:background .12s,border-color .12s}
+.blocs-titre{font:400 clamp(40px,12vw,64px)/.9 var(--f-titre);letter-spacing:.03em}
+.blocs-sous{font:500 italic 17px/1.3 var(--f-serif);color:var(--ivoire-doux);max-width:28ch}
+.blocs.attente{border-color:var(--or)}
+.blocs.go{background:var(--ivoire);color:var(--encre);border-color:var(--ivoire)}
+.blocs.go .blocs-sous{color:var(--encre)}
+.blocs.faux{border-color:var(--erreur)}
+.blocs.faux .blocs-titre{color:var(--erreur)}
 .merci .hero .gros{font-size:clamp(96px,30vw,150px)}
 
 #confettis{position:fixed;inset:0;pointer-events:none;z-index:50}
@@ -311,12 +332,21 @@ section[data-ecran]{display:flex;flex-direction:column;gap:22px;animation:entre 
   <!-- ENVOI -->
   <section data-ecran="envoi" hidden>
     <div class="envoi">
-      <h2 class="titre" style="justify-content:center">Envoi en cours</h2>
-      <div class="barre"><b id="envoi-barre"></b></div>
-      <p class="aide" id="envoi-txt">Préparation…</p>
-      <p class="blague" id="envoi-blague" aria-live="polite"></p>
+      <h2 class="titre" style="justify-content:center" id="envoi-titre">Envoi en cours</h2>
+      <div class="jauge"><b id="envoi-barre"></b><span id="envoi-pct">0 %</span></div>
+      <p class="blague" id="envoi-blague" aria-live="polite">Contrôle antidopage en cours<span class="points"><i>.</i><i>.</i><i>.</i></span></p>
+      <p class="reste" id="envoi-reste">Reste sur la page jusqu'au résultat du contrôle</p>
       <p class="msg" id="msg-envoi"></p>
       <button class="btn" id="reessayer" hidden>Réessayer</button>
+      <button class="btn" id="continuer" hidden>Voir la suite</button>
+
+      <div class="jeu" id="jeu">
+        <p class="jeu-tete"><span>En attendant</span><span id="jeu-best"></span></p>
+        <button type="button" class="blocs" id="blocs" aria-live="polite">
+          <span class="blocs-titre" id="blocs-titre">Teste ta réaction</span>
+          <span class="blocs-sous" id="blocs-sous">Touche pour te mettre dans les starting-blocks</span>
+        </button>
+      </div>
     </div>
   </section>
 
@@ -706,6 +736,40 @@ function flash(titre, sous) {
   });
 })();
 
+/* ---------- Mini-jeu pendant l'envoi : temps de réaction au départ ---------- */
+const JEU = (() => {
+  const zone = $("#blocs"), titre = $("#blocs-titre"), sous = $("#blocs-sous");
+  let etat = "repos", t0 = 0, minuteurs = [], meilleur = null;
+  const verdict = ms =>
+    ms < 120 ? "Suspect… contrôle antidopage renforcé 👀" :
+    ms < 190 ? "Départ d'élite. La finale t'attend." :
+    ms < 250 ? "Solide. Le starter est content." :
+    ms < 350 ? "Ça passe, mais l'adversaire est déjà loin." :
+               "T'étais sur TikTok ?";
+  const afficher = (t, st, cl) => { titre.textContent = t; sous.textContent = st; zone.className = "blocs" + (cl ? " " + cl : ""); };
+  const stop = () => { minuteurs.forEach(clearTimeout); minuteurs = []; };
+  function lancer() {
+    etat = "attente"; afficher("À vos marques…", "Attends le signal, ne bouge pas", "attente");
+    minuteurs.push(setTimeout(() => { if (etat === "attente") titre.textContent = "Prêts…"; }, 900));
+    minuteurs.push(setTimeout(() => { if (etat !== "attente") return; etat = "go"; t0 = performance.now(); afficher("PARTEZ !", "Touche maintenant !", "go"); }, 1900 + Math.random() * 2200));
+  }
+  zone.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    if (etat === "go") {
+      const ms = Math.round(performance.now() - t0); etat = "fini";
+      if (meilleur === null || ms < meilleur) meilleur = ms;
+      $("#jeu-best").textContent = "Record : " + meilleur + " ms";
+      afficher(ms + " ms", verdict(ms) + " · Touche pour rejouer");
+    } else if (etat === "attente") {
+      stop(); etat = "fini"; afficher("Faux départ !", "Carton jaune. Touche pour recommencer", "faux");
+    } else { stop(); lancer(); }
+  });
+  return {
+    enCours: () => etat === "attente" || etat === "go",
+    reset: () => { stop(); etat = "repos"; afficher("Teste ta réaction", "Touche pour te mettre dans les starting-blocks"); },
+  };
+})();
+
 /* ---------- Envoi ---------- */
 $$("[data-envoyer]").forEach(b => b.onclick = () => {
   if (S.statut === "Perfs" && !$("#consent").checked) return msg("msg-fin", "Coche la case pour qu'on puisse publier tes résultats.");
@@ -772,12 +836,19 @@ async function envoyer() {
   if (S.duree == null && S.statut === "Perfs" && debut) S.duree = Math.round((Date.now() - debut) / 1000); // chrono arrêté au clic, l'envoi des photos ne compte pas
   const { d, lots } = construire();
   if (S.duree != null) d.duree = S.duree;
-  const blague = $("#envoi-blague");
-  blague.textContent = ATTENTE;
+  const blague = $("#envoi-blague"), boite = $(".envoi");
+  blague.innerHTML = ATTENTE.replace(/…$/, "") + '<span class="points"><i>.</i><i>.</i><i>.</i></span>';
   const total = lots.reduce((n, l) => n + l.photos.length, 0) + 1;
-  let fait = 0;
-  const avance = t => { $("#envoi-txt").textContent = t; $("#envoi-barre").style.width = (fait / total * 100) + "%"; };
-  $("#reessayer").hidden = true; msg("msg-envoi"); montrer("envoi");
+  let fait = 0, affiche = 0;
+  const pose = p => { affiche = Math.max(affiche, p); $("#envoi-barre").style.width = affiche + "%"; $("#envoi-pct").textContent = Math.round(affiche) + " %"; };
+  // La jauge avance toute seule vers 92 % pendant l'attente, et saute aux vraies étapes (photos) quand elles arrivent
+  const glisse = setInterval(() => { const vrai = fait / total * 100; pose(Math.max(vrai, affiche + (92 - affiche) * .035)); }, 120);
+  const avance = () => pose(fait / total * 100);
+  const pasQuitter = e => { e.preventDefault(); e.returnValue = ""; };
+  addEventListener("beforeunload", pasQuitter);
+  boite.classList.remove("fini"); $("#envoi-titre").textContent = "Envoi en cours";
+  $("#envoi-reste").hidden = false; $("#continuer").hidden = true;
+  $("#reessayer").hidden = true; msg("msg-envoi"); JEU.reset(); affiche = 0; pose(0); montrer("envoi");
   try {
     let n = 0;
     for (const l of lots) {
@@ -785,17 +856,27 @@ async function envoyer() {
       for (const p of l.photos) {
         n++;
         if (p.envoyee) { l.ligne.photos.push(p.envoyee); fait++; continue; } // déjà partie lors d'un essai précédent
-        avance(`Photo ${n} sur ${total - 1}…`);
+        avance();
         const ph = await preparerPhoto(p.file);
         const r = await poster({ action: "photo", id: d.id, nomLibre: d.nomLibre, date: l.ligne.date, index: n, nomFichier: ph.nom, type: ph.type, donnees: await lireBase64(ph.blob) });
         p.envoyee = r.url; l.ligne.photos.push(r.url); fait++;
       }
     }
-    avance("Enregistrement de tes résultats…");
     let rep = await poster(d);
     if (APERCU && d.duree) { rep = { ok: true, record: !recordApercu || d.duree < recordApercu ? { ancien: recordApercu } : null }; if (rep.record) recordApercu = d.duree; }
-    fait = total; avance("C'est envoyé !");
-    await pause(300);
+    fait = total; clearInterval(glisse); pose(100);
+    removeEventListener("beforeunload", pasQuitter);
+    boite.classList.add("fini");
+    $("#envoi-titre").textContent = "Contrôle négatif";
+    blague.textContent = "Tout est bien enregistré ✓";
+    $("#envoi-reste").hidden = true;
+    // Si l'athlète est en plein départ, on attend qu'il clique ; sinon on enchaîne tout seul
+    await new Promise(ok => {
+      const suite = () => { clearInterval(guet); $("#continuer").hidden = true; ok(); };
+      $("#continuer").onclick = suite;
+      let calme = 0;
+      const guet = setInterval(() => { if (JEU.enCours()) { $("#continuer").hidden = false; calme = -1e9; } else if ((calme += 100) >= 1600) suite(); }, 100);
+    });
     $("#merci-txt").textContent = MERCI_TXT;
     const h = new Date().getHours();
     if (h >= 1 && h < 5) $("#merci-txt").textContent = "Merci… mais va dormir, la récup c'est aussi de l'entraînement.";
@@ -812,7 +893,8 @@ async function envoyer() {
     montrer("merci");
     if (S.statut === "Perfs") setTimeout(() => confettis("explosion"), 250);
   } catch (err) {
-    blague.textContent = "";
+    clearInterval(glisse); removeEventListener("beforeunload", pasQuitter);
+    blague.textContent = ""; $("#envoi-reste").hidden = true;
     lots.forEach(l => l.ligne.photos = []);
     msg("msg-envoi", "L'envoi n'a pas abouti. Vérifie ta connexion puis réessaie : rien de ce que tu as rempli n'est perdu.");
     $("#reessayer").hidden = false;
