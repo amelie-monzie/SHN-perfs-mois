@@ -33,11 +33,14 @@ body{margin:0;min-height:100%;background:var(--rouge-nuit);color:var(--ivoire);f
 .fond{position:fixed;inset:0;z-index:0;background:var(--rouge) url("fond.jpg") center 30%/cover no-repeat}
 .fond::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 35%,transparent 40%,rgba(40,3,3,.55) 100%)}
 
-.page{position:relative;z-index:1;max-width:540px;margin:0 auto;padding-inline:20px;padding-block:18px 40px;min-height:100vh;display:flex;flex-direction:column;gap:28px}
+.page{position:relative;z-index:1;max-width:540px;margin:0 auto;padding-inline:20px;padding-block:18px 40px;min-height:100vh;min-height:100svh;display:flex;flex-direction:column;gap:28px}
+/* Écrans courts centrés verticalement entre le bandeau et le pied de page */
+section[data-ecran="accueil"],section[data-ecran="envoi"],section[data-ecran="merci"]{margin-block:auto}
 
 /* Bandeau */
-.bandeau{display:flex;justify-content:center;align-items:center;gap:clamp(8px,2.5vw,14px);font:500 clamp(8.5px,2.5vw,11px)/1 var(--f-label);letter-spacing:.18em;text-transform:uppercase;white-space:nowrap}
-.bandeau span{flex:none}
+.bandeau{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:clamp(8px,2.5vw,14px);font:500 clamp(8px,2.3vw,11px)/1 var(--f-label);letter-spacing:.16em;text-transform:uppercase;white-space:nowrap}
+.bandeau span:first-child{justify-self:end}
+.bandeau span:last-child{justify-self:start}
 .bandeau img{height:clamp(24px,7vw,34px)!important;padding-inline:clamp(8px,2.5vw,12px)!important;touch-action:manipulation;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;cursor:default;height:34px;width:auto;display:block;padding-inline:12px;border-inline:1px solid var(--ligne)}
 .demo{font:500 11px/1.4 var(--f-label);letter-spacing:.14em;text-transform:uppercase;text-align:center;color:var(--succes);border:1px dashed rgba(231,200,115,.5);padding:6px 10px;border-radius:2px}
 
@@ -180,7 +183,7 @@ button:focus-visible,.ajout-photo:focus-within{outline:2px solid var(--or);outli
   100%{transform:translate(100vw,30px) scale(.95);opacity:0;filter:blur(6px)}}
 @media (prefers-reduced-motion:reduce){.renard{animation:fondu 1.6s ease forwards;transform:translateX(calc(50vw - 50%))}}
 @keyframes fondu{0%,100%{opacity:0}40%,60%{opacity:.9}}
-.pied{margin-top:auto;display:flex;align-items:center;gap:14px;font:500 13px/1 var(--f-label);letter-spacing:.3em;padding-top:12px}
+.pied{margin-top:auto;padding-bottom:4px;display:flex;align-items:center;gap:14px;font:500 13px/1 var(--f-label);letter-spacing:.3em;padding-top:12px}
 .pied::before,.pied::after{content:"";flex:1;height:1px;background:rgba(214,60,50,.7)}
 
 section[data-ecran]{display:flex;flex-direction:column;gap:22px;animation:entre .35s ease both}
@@ -207,7 +210,7 @@ section[data-ecran]{display:flex;flex-direction:column;gap:22px;animation:entre 
       <h1 class="gros">TES PERFS</h1>
       <div class="serif">du mois</div>
       <div class="badge"><svg viewBox="0 0 12 20" aria-hidden="true"><use href="#laurier"/></svg><span id="badge-mois">Récap</span><svg viewBox="0 0 12 20" aria-hidden="true" style="transform:scaleX(-1)"><use href="#laurier"/></svg></div>
-      <p class="intro">Deux minutes pour nous dire ce que tu as fait ce mois-ci. Nous, on s'occupe de te mettre en avant.</p>
+      <p class="intro">2/3 minutes pour nous dire ce que tu as fait ce mois-ci. Nous, on s'occupe de te mettre en avant.</p>
     </div>
     <form id="f-nom" class="pile" novalidate>
       <div class="champ">
@@ -216,7 +219,7 @@ section[data-ecran]{display:flex;flex-direction:column;gap:22px;animation:entre 
       </div>
       <p class="msg" id="msg-nom"></p>
       <div class="resultats" id="liste-noms" hidden></div>
-      <button class="btn large" type="submit" id="btn-nom">C'est parti</button>
+      <button class="btn large" type="submit" id="btn-nom">LETSSSSGOOOO</button>
     </form>
   </section>
 
