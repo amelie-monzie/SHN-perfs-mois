@@ -1,3 +1,7 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
 <title>Résultats S²E</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,18 +26,19 @@
   --f-label:"Oswald","Arial Narrow",sans-serif;
   color-scheme:dark;
 }
+[hidden]{display:none!important}
 *{box-sizing:border-box}
 html{background:var(--rouge-nuit)}
 body{margin:0;min-height:100%;background:var(--rouge-nuit);color:var(--ivoire);font:400 16px/1.5 var(--f-texte);-webkit-font-smoothing:antialiased}
-.fond{position:fixed;inset:0;z-index:-1;background:var(--rouge) url("fond.jpg") center 30%/cover no-repeat}
+.fond{position:fixed;inset:0;z-index:0;background:var(--rouge) url("fond.jpg") center 30%/cover no-repeat}
 .fond::after{content:"";position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 35%,transparent 40%,rgba(40,3,3,.55) 100%)}
 
-.page{max-width:540px;margin:0 auto;padding-inline:20px;padding-block:18px 40px;min-height:100vh;display:flex;flex-direction:column;gap:28px}
+.page{position:relative;z-index:1;max-width:540px;margin:0 auto;padding-inline:20px;padding-block:18px 40px;min-height:100vh;display:flex;flex-direction:column;gap:28px}
 
 /* Bandeau */
-.bandeau{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;font:500 11px/1 var(--f-label);letter-spacing:.24em;text-transform:uppercase}
-.bandeau span:first-child{text-align:right}
-.bandeau img{touch-action:manipulation;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;cursor:default;height:34px;width:auto;display:block;padding-inline:12px;border-inline:1px solid var(--ligne)}
+.bandeau{display:flex;justify-content:center;align-items:center;gap:clamp(8px,2.5vw,14px);font:500 clamp(8.5px,2.5vw,11px)/1 var(--f-label);letter-spacing:.18em;text-transform:uppercase;white-space:nowrap}
+.bandeau span{flex:none}
+.bandeau img{height:clamp(24px,7vw,34px)!important;padding-inline:clamp(8px,2.5vw,12px)!important;touch-action:manipulation;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;cursor:default;height:34px;width:auto;display:block;padding-inline:12px;border-inline:1px solid var(--ligne)}
 .demo{font:500 11px/1.4 var(--f-label);letter-spacing:.14em;text-transform:uppercase;text-align:center;color:var(--succes);border:1px dashed rgba(231,200,115,.5);padding:6px 10px;border-radius:2px}
 
 /* Progression */
@@ -183,6 +188,8 @@ section[data-ecran]{display:flex;flex-direction:column;gap:22px;animation:entre 
 @media (prefers-reduced-motion:reduce){section[data-ecran],.merci.fete *,.flash span,.tremble{animation:none!important}*{transition:none!important}}
 </style>
 
+</head>
+<body>
 <div class="fond" aria-hidden="true"></div>
 <div class="page">
   <header class="bandeau">
@@ -315,7 +322,7 @@ section[data-ecran]{display:flex;flex-direction:column;gap:22px;animation:entre 
       <h2 class="gros">MERCI</h2>
       <div class="serif" id="merci-prenom">champion</div>
       <div class="record" id="speedrun" hidden><p class="trophee" id="speedrun-titre"></p><p class="record-txt" id="speedrun-txt"></p></div>
-      <p class="intro" id="merci-txt">C'est bien reçu. Garde un œil sur l'Insta S²E&nbsp;: ta perf pourrait bien y passer.</p>
+      <p class="intro" id="merci-txt">C'est bien reçu, MERCI! Garde un œil sur l'Insta @SHN_INSATOULOUSE: ta perf pourrait bien y passer.</p>
       <p class="intro" style="margin-top:8px">Un·e pote de la section a fait un truc fou&nbsp;? Envoie-lui le lien.</p>
     </div>
     <button class="btn large" id="recommencer">Remplir pour quelqu'un d'autre</button>
@@ -406,11 +413,16 @@ async function chercher(texte) {
     if (mots.length < 2) return [];
     return DEMO_ATHLETES.filter(a => { const t = norm(a.prenom + " " + a.nom).split(" "); return mots.every(m => t.some(x => proche(m, x))); });
   }
-  const r = await fetch(FACTEUR + "?action=chercher&nom=" + encodeURIComponent(texte));
-  const j = await r.json();
-  if (!j.ok) throw new Error(j.erreur || "Erreur du facteur");
-  return j.trouves;
+  const ctl = new AbortController(), minuteur = setTimeout(() => ctl.abort(), 25000);
+  try {
+    const r = await fetch(FACTEUR + "?action=chercher&nom=" + encodeURIComponent(texte), { signal: ctl.signal });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.erreur || "Erreur du facteur");
+    return j.trouves;
+  } finally { clearTimeout(minuteur); }
 }
+// Réveille le facteur dès l'ouverture de la page : Google met quelques secondes à démarrer après une pause.
+if (!APERCU) fetch(FACTEUR).catch(() => {});
 async function poster(donnees) {
   if (APERCU) { await pause(500); return { ok: true, url: "apercu" }; }
   // text/plain : évite la requête de pré-vérification que Google refuse
@@ -434,6 +446,7 @@ $("#f-nom").addEventListener("submit", async e => {
   liste.hidden = true; msg("msg-nom");
   if (norm(texte).split(" ").length < 2) return msg("msg-nom", "Écris ton prénom et ton nom, par exemple « Théo Faure ».");
   const b = $("#btn-nom"); b.disabled = true; b.textContent = "On te cherche…";
+  const patience = setTimeout(() => msg("msg-nom", "Le facteur se réveille, encore quelques secondes…"), 3500);
   try {
     const t = await chercher(texte);
     if (t.length === 1) return choisir(t[0]);
@@ -447,7 +460,7 @@ $("#f-nom").addEventListener("submit", async e => {
     $("#go-inconnu").onclick = () => { $("#libre-nom").value = texte; montrer("inconnu"); };
   } catch (err) {
     msg("msg-nom", "Connexion impossible pour l'instant. Vérifie ton réseau et réessaie.");
-  } finally { b.disabled = false; b.textContent = "C'est parti"; }
+  } finally { clearTimeout(patience); b.disabled = false; b.textContent = "C'est parti"; }
 });
 
 function choisir(a) {
@@ -798,3 +811,6 @@ async function envoyer() {
 }
 $("#recommencer").onclick = () => location.reload();
 </script>
+
+</body>
+</html>
